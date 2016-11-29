@@ -8,6 +8,11 @@ const Alexa = require('alexa-sdk');
 const request = require('request');
 
 const APP_ID = process.env.APP_ID;
+const QUANDL_KEY = process.env.QUANDL_KEY;
+var dateNow = new Date();
+var dateNowYear = dateNow.getFullYear();
+var dateNowMonth = dateNow.getMonth();
+var currentMonthDate = dateNowYear + "-" + dateNowMonth + "-01";
 
 const handlers = {
     'LaunchRequest': function () {
@@ -19,16 +24,14 @@ const handlers = {
     'GetFedRate': function() {
         this.emit('GetQuandlFedRate');  
     },
-    'GetFact': function () {
-        // Get a random space fact from the space facts list
-        // Use this.t() to get corresponding language data
-        const factArr = this.t('FACTS');
-        const factIndex = Math.floor(Math.random() * factArr.length);
-        const randomFact = factArr[factIndex];
-
-        // Create speech output
-        const speechOutput = this.t('GET_FACT_MESSAGE') + randomFact;
-        this.emit(':tellWithCard', speechOutput, this.t('SKILL_NAME'), randomFact);
+    'GetThirtyYearFixed': function(){
+        this.emit('Get30YearFixedRate');
+    },
+    'GetFifteenYearFixed': function(){
+        this.emit('Get15YearFixedRate');
+    },
+    'Get5YearArm': function(){
+        this.emit('Get5YearArmRate');
     },
     'GetFedRateTrend': function() {
         var t = this;
@@ -38,7 +41,7 @@ const handlers = {
         var month = d.getMonth();
         var day = "01";
         var newDate = dateYear + "-" + month + "-" + day;
-        request("https://www.quandl.com/api/v3/datasets/FRED/FEDFUNDS.json?api_key=Jp2mQq6qHYCkgD753iSw&start_date="+newDate, function(error, response, body){
+        request("https://www.quandl.com/api/v3/datasets/FRED/FEDFUNDS.json?api_key="+QUANDL_KEY+"&start_date="+newDate, function(error, response, body){
             if(!error && response.statusCode == 200) {
                 // calculate linear fit
                 var jsonBody = JSON.parse(body);
@@ -77,15 +80,47 @@ const handlers = {
     },
     'GetQuandlFedRate': function() {
         var t = this;
-        request('https://www.quandl.com/api/v3/datasets/FRED/FEDFUNDS.json?api_key=Jp2mQq6qHYCkgD753iSw&start_date=2016-07-01', function(error, response, body){
+        request('https://www.quandl.com/api/v3/datasets/FRED/FEDFUNDS.json?api_key='+QUANDL_KEY+'&start_date='+currentMonthDate, function(error, response, body){
             if(!error && response.statusCode == 200) {
                 var jsonBody = JSON.parse(body);
                 var latestRate = jsonBody.dataset.data[0][1];
                 const output = "The current effective fed rate is around "+latestRate+" percent.";
-                console.log(output);
                 t.emit(':tellWithCard', output, 'Effective Federal Reserve Rate', latestRate+"%");
             } else {
                 console.log(error);
+            }
+        });
+    },
+    'Get30YearFixedRate': function() {
+        var t = this;
+        request('https://www.quandl.com/api/v3/datasets/FMAC/FIX30YR.json?api_key='+QUANDL_KEY+'&start_date='+currentMonthDate, function(error, response, body){
+            if(!error && response.statusCode == 200) {
+                var jsonBody = JSON.parse(body);
+                var latestRate = jsonBody.dataset.data[0][1];
+                const output = "The current 30 year fixed rate, as reported by freddie mac, is around "+latestRate+" percent.";
+                t.emit(':tellWithCard', output, '30 Year Fixed Mortgage Rate', latestRate+"%");
+            }
+        });
+    },
+    'Get15YearFixedRate': function() {
+        var t = this;
+        request('https://www.quandl.com/api/v3/datasets/FMAC/FIX15YR.json?api_key='+QUANDL_KEY+'&start_date='+currentMonthDate, function(error, response, body){
+            if(!error && response.statusCode == 200) {
+                var jsonBody = JSON.parse(body);
+                var latestRate = jsonBody.dataset.data[0][1];
+                const output = "The current 15 year fixed rate, as reported by freddie mac, is around "+latestRate+" percent.";
+                t.emit(':tellWithCard', output, '15 Year Fixed Mortgage Rate', latestRate+"%");
+            }
+        });
+    },
+    'Get5YearArmRate': function() {
+        var t = this;
+        request('https://www.quandl.com/api/v3/datasets/FMAC/ARM5YR.json?api_key='+QUANDL_KEY+'&start_date='+currentMonthDate, function(error, response, body){
+            if(!error && response.statusCode == 200) {
+                var jsonBody = JSON.parse(body);
+                var latestRate = jsonBody.dataset.data[0][1];
+                const output = "The current 5 year adjustable rate, as reported by freddie mac, is around "+latestRate+" percent.";
+                t.emit(':tellWithCard', output, '5 Year Adjustable Rate Mortage', latestRate+"%");
             }
         });
     },
